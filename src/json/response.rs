@@ -93,9 +93,10 @@ pub fn parse_resposne(
     file_path: String,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<Vec<HashMap<String, Value>>> {
-    let file = File::open(file_path).expect("failed to open source");
+    let file = File::open(file_path).expect("failed to open response file");
     let reader = BufReader::new(file);
-    let response: Response = serde_json::from_reader(reader).expect("Failed to parse response");
+    let response: Response =
+        serde_json::from_reader(reader).expect("failed to parse response file");
 
     let oa_attributes = extract_oa_attributes(response.data);
 

@@ -8,6 +8,12 @@ pub mod reference;
 pub mod response;
 
 #[derive(Debug, Deserialize)]
+pub struct ObjectAttribute {
+    attributes: Attribute,
+    included: Vec<PicklistOption>,
+}
+
+#[derive(Debug, Deserialize)]
 struct PicklistOptionAttribute {
     name: String,
 }
@@ -25,12 +31,55 @@ struct Attribute {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ObjectAttribute {
-    attributes: Attribute,
-    included: Vec<PicklistOption>,
+struct ObjectEntity {
+    attributes: HashMap<String, Value>,
 }
 
 #[derive(Debug, Deserialize)]
-struct ObjectEntity {
-    attributes: HashMap<String, Value>,
+struct SearchQuery {
+    object_class_id: String,
+    search_query_groups: Vec<SearchQueryGroup>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchQueryGroup {
+    operator: SearchQueryGroupOperator,
+    search_query_conditions: Option<Vec<SearchQueryCondition>>,
+    children: Option<Vec<SearchQueryGroup>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchQueryCondition {
+    operator: SearchQueryConditionOperator,
+    object_attribute_id: String,
+    value: Option<Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+enum SearchQueryGroupOperator {
+    AND,
+    OR,
+    NOT,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SearchQueryConditionOperator {
+    Equal,
+    NotEqual,
+    Contain,
+    NotContain,
+    IsPresent,
+    IsBlank,
+    GT,
+    GTE,
+    LT,
+    LTE,
+    Between,
+    AnyOf,
+    NoneOf,
+    True,
+    False,
+    Address,
 }
