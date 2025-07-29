@@ -9,55 +9,43 @@ use serde_json::Value;
 #[command(version, about, long_about = None)]
 pub struct Cli {
     #[command(flatten)]
-    pub exclusive: Exclusive,
+    pub inclusive: Inclusive,
 
     /// Path to oa id hashmap file
     pub hashmap_file: String,
 }
 
 #[derive(Args, Debug)]
-#[group(required = true, multiple = false)]
-pub struct Exclusive {
+#[group(required = true, multiple = true)]
+pub struct Inclusive {
     /// Path to payload file
-    #[arg(short, long, value_name = "Payload JSON file")]
+    #[arg(short, long, value_name = "PAYLOAD_JSON_FILE")]
     pub payload: Option<String>,
 
     /// Path to response file
-    #[arg(short, long, value_name = "Response JSON file")]
+    #[arg(short, long, value_name = "RESPONSE_JSON_FILE")]
     pub response: Option<String>,
-}
-
-#[derive(Debug)]
-pub enum InputSource {
-    Response(String),
-    Payload(String),
 }
 
 #[derive(Debug)]
 pub struct Config {
     oa_id_hashmap_file_path: String,
-    input_source: InputSource,
+    response_file_path: Option<String>,
+    payload_file_path: Option<String>,
 }
 
 impl Config {
     pub fn new(args: Cli) -> Self {
-        let input_source = match (args.exclusive.response, args.exclusive.payload) {
-            (Some(response), None) => InputSource::Response(response),
-            (None, Some(payload)) => InputSource::Payload(payload),
-            _ => unreachable!("wtf..."),
-        };
-
         Config {
             oa_id_hashmap_file_path: args.hashmap_file,
-            input_source,
+            response_file_path: args.inclusive.response,
+            payload_file_path: args.inclusive.payload,
         }
     }
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct PicklistOptionAttribute {
-    label: String,
     name: String,
 }
 
@@ -68,26 +56,19 @@ struct PicklistOption {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct Attribute {
-    label: String,
     name: String,
     data_type: String,
-    reference_to: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct ObjectAttribute {
-    id: String,
     attributes: Attribute,
     included: Vec<PicklistOption>,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct ObjectEntity {
-    id: String,
     attributes: HashMap<String, Value>,
 }
 
@@ -185,45 +166,44 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let oa_id_hashmap: HashMap<String, ObjectAttribute> =
         serde_json::from_reader(hashmap_reader).expect("failed to parse hashmap file");
 
-    match config.input_source {
-        InputSource::Response(response) => {
-            let source_path = response;
-            let input_source = File::open(source_path).expect("failed to open source");
-            let source_reader = BufReader::new(input_source);
-            let serialized_source: Response =
-                serde_json::from_reader(source_reader).expect("Failed to parse response");
+    if let Some(response) = config.response_file_path {
+        let source_path = response;
+        let input_source = File::open(source_path).expect("failed to open source");
+        let source_reader = BufReader::new(input_source);
+        let serialized_source: Response =
+            serde_json::from_reader(source_reader).expect("Failed to parse response");
 
-            let oa_attributes = extract_oa_attributes(serialized_source.data);
+        let oa_attributes = extract_oa_attributes(serialized_source.data);
 
-            let object_entities: Vec<HashMap<String, Value>> =
-                process_oa_attributes(oa_attributes, &oa_id_hashmap)?;
+        let object_entities: Vec<HashMap<String, Value>> =
+            process_oa_attributes(oa_attributes, &oa_id_hashmap)?;
 
-            println!("{:#?}", object_entities);
-        }
-        InputSource::Payload(payload) => {
-            let source_path = payload;
-            let input_source = File::open(source_path).expect("failed to open source");
-            let source_reader = BufReader::new(input_source);
-            let serialized_source: Payload =
-                serde_json::from_reader(source_reader).expect("Failed to parse response");
+        println!("{:#?}", object_entities);
+    };
 
-            let oa_ids = serialized_source.object_attribute_ids;
+    if let Some(payload) = config.payload_file_path {
+        let source_path = payload;
+        let input_source = File::open(source_path).expect("failed to open source");
+        let source_reader = BufReader::new(input_source);
+        let serialized_source: Payload =
+            serde_json::from_reader(source_reader).expect("Failed to parse response");
 
-            let object_entities: Vec<HashMap<String, String>> = oa_ids
-                .into_iter()
-                .map(|id| {
-                    let mut map = HashMap::new();
-                    let value = oa_id_hashmap
-                        .get(&id)
-                        .map(|oa| oa.attributes.name.clone())
-                        .unwrap_or_else(|| "not found".to_string());
-                    map.insert(id, value);
-                    map
-                })
-                .collect();
+        let oa_ids = serialized_source.object_attribute_ids;
 
-            println!("{:#?}", object_entities);
-        }
+        let object_entities: Vec<HashMap<String, String>> = oa_ids
+            .into_iter()
+            .map(|id| {
+                let mut map = HashMap::new();
+                let value = oa_id_hashmap
+                    .get(&id)
+                    .map(|oa| oa.attributes.name.clone())
+                    .unwrap_or_else(|| "not found".to_string());
+                map.insert(id, value);
+                map
+            })
+            .collect();
+
+        println!("{:#?}", object_entities);
     };
 
     Ok(())
