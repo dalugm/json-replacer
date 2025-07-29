@@ -178,6 +178,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         let object_entities: Vec<HashMap<String, Value>> =
             process_oa_attributes(oa_attributes, &oa_id_hashmap)?;
 
+        pretty_print("response");
         println!("{:#?}", object_entities);
     };
 
@@ -203,8 +204,17 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
             })
             .collect();
 
+        pretty_print("payload");
         println!("{:#?}", object_entities);
     };
 
     Ok(())
+}
+
+fn pretty_print(title: &str) {
+    println!();
+    println!("{:#^50}", "");
+    println!("{:#^50}", format!(" {title} "));
+    println!("{:#^50}", "");
+    println!();
 }
