@@ -92,13 +92,35 @@ fn parse_search_query_conditions(
         let (name, value) = match hashmap.get(&condition.object_attribute_id) {
             Some(oa) => {
                 let name = oa.attributes.name.clone();
-                (name, condition.value)
+                let mut value = condition.value;
+
+                if oa.attributes.data_type == "picklist" {
+                    value = match value {
+                        Some(option_id) => {
+                            let picklist_option =
+                                oa.included.iter().find(|option| option.id == option_id);
+
+                            match picklist_option {
+                                Some(option) => {
+                                    Some(serde_json::Value::String(option.attributes.name.clone()))
+                                }
+                                None => {
+                                    println!("Picklist option not found for id: {option_id}");
+                                    Some("not found".into())
+                                }
+                            }
+                        }
+                        None => None,
+                    }
+                }
+
+                (name, value)
             }
             None => ("not found".to_string(), condition.value),
         };
 
         let str = match value {
-            Some(_) => format!(" {name} {value:?}"),
+            Some(value) => format!(" {name} {value}"),
             None => format!(" {name}"),
         };
 
