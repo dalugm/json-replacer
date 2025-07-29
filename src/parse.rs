@@ -37,7 +37,6 @@ struct ObjectEntity {
 
 #[derive(Debug, Deserialize)]
 struct SearchQuery {
-    object_class_id: String,
     search_query_groups: Vec<SearchQueryGroup>,
 }
 
@@ -58,9 +57,9 @@ struct SearchQueryCondition {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 enum SearchQueryGroupOperator {
-    AND,
-    OR,
-    NOT,
+    And,
+    Or,
+    Not,
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,10 +71,10 @@ enum SearchQueryConditionOperator {
     NotContain,
     IsPresent,
     IsBlank,
-    GT,
-    GTE,
-    LT,
-    LTE,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
     Between,
     AnyOf,
     NoneOf,

@@ -1,9 +1,9 @@
-mod json;
+mod parse;
 
 use anyhow::Result;
 use clap::{Args, Parser};
 
-use json::{payload::parse_payload, reference::parse_reference, response::parse_resposne};
+use parse::{payload::parse_payload, reference::parse_reference, response::parse_resposne};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -60,14 +60,14 @@ pub fn run(config: Config) -> Result<()> {
         let object_entities = parse_resposne(file_path, &oa_id_hashmap)?;
 
         pretty_print("response");
-        println!("{:#?}", object_entities);
+        println!("{object_entities:#?}");
     };
 
     if let Some(file_path) = config.payload_file_path {
         let parsed_payload = parse_payload(file_path, &oa_id_hashmap)?;
 
         pretty_print("payload");
-        println!("{:#?}", parsed_payload);
+        println!("{parsed_payload:#?}");
     };
 
     Ok(())

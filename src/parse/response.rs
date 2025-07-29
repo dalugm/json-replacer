@@ -27,21 +27,21 @@ fn extract_oa_attributes(entities: Vec<ObjectEntity>) -> Vec<HashMap<String, Val
 
 fn process_oa_attributes(
     oa_attributes: Vec<HashMap<String, Value>>,
-    oa_id_hashmap: &HashMap<String, ObjectAttribute>,
+    hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<Vec<HashMap<String, Value>>> {
     oa_attributes
         .into_iter()
-        .map(|attrs| process_single_attribute(attrs, oa_id_hashmap))
+        .map(|attrs| process_single_attribute(attrs, hashmap))
         .collect()
 }
 
 fn process_single_attribute(
     mut oa_attribute: HashMap<String, Value>,
-    oa_id_hashmap: &HashMap<String, ObjectAttribute>,
+    hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<HashMap<String, Value>> {
     let result: HashMap<String, Value> = oa_attribute
         .drain()
-        .map(|(key, value)| match oa_id_hashmap.get(&key) {
+        .map(|(key, value)| match hashmap.get(&key) {
             Some(oa) => process_known_attribute(oa, key, value),
             None => {
                 println!("Unknown object attribute id: {key}");
