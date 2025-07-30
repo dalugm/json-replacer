@@ -17,6 +17,38 @@ pub struct Payload {
     search_query: SearchQuery,
 }
 
+/// Transform picklist oa id to name.
+fn process_picklist_oa_value(oa: &ObjectAttribute, value: Value) -> Value {
+    match value {
+        Value::String(option_id) => {
+            let picklist_option = oa.included.iter().find(|option| option.id == option_id);
+
+            match picklist_option {
+                Some(option) => serde_json::Value::String(option.attributes.name.clone()),
+                None => {
+                    println!("Picklist option not found for id: {option_id}");
+                    "not found picklist label".into()
+                }
+            }
+        }
+        Value::Array(option_ids) => option_ids
+            .iter()
+            .map(|option_id| {
+                let picklist_option = oa.included.iter().find(|option| option.id == *option_id);
+
+                match picklist_option {
+                    Some(option) => serde_json::Value::String(option.attributes.name.clone()),
+                    None => {
+                        println!("Picklist option not found for id: {option_id}");
+                        "not found picklist label".into()
+                    }
+                }
+            })
+            .collect(),
+        _ => "picklist value is {option_id_value:#?}, which is not implemented yet.".into(),
+    }
+}
+
 fn parse_search_query_group(
     group: SearchQueryGroup,
     hashmap: &HashMap<String, ObjectAttribute>,
@@ -111,22 +143,9 @@ fn parse_search_query_conditions(
 
                 if oa.attributes.data_type == "picklist" {
                     value = match value {
-                        Some(option_id) => {
-                            let picklist_option =
-                                oa.included.iter().find(|option| option.id == option_id);
-
-                            match picklist_option {
-                                Some(option) => {
-                                    Some(serde_json::Value::String(option.attributes.name.clone()))
-                                }
-                                None => {
-                                    println!("Picklist option not found for id: {option_id}");
-                                    Some("not found".into())
-                                }
-                            }
-                        }
+                        Some(value) => Some(process_picklist_oa_value(oa, value)),
                         None => None,
-                    }
+                    };
                 }
 
                 (name, value)
