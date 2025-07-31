@@ -45,12 +45,8 @@ impl Config {
     }
 }
 
-fn pretty_print(title: &str) {
-    println!();
-    println!("{:#^50}", "");
-    println!("{:#^50}", format!(" {title} "));
-    println!("{:#^50}", "");
-    println!();
+fn pretty_print(title: &str, count: usize) {
+    println!("\n{:#^width$}\n", format!(" {title} "), width = count);
 }
 
 pub fn run(config: Config) -> Result<()> {
@@ -59,14 +55,14 @@ pub fn run(config: Config) -> Result<()> {
     if let Some(file_path) = config.response_file_path {
         let object_entities = parse_resposne(file_path, &oa_id_hashmap)?;
 
-        pretty_print("response");
+        pretty_print("response", 80);
         println!("{object_entities:#?}");
     };
 
     if let Some(file_path) = config.payload_file_path {
         let parsed_payload = parse_payload(file_path, &oa_id_hashmap)?;
 
-        pretty_print("payload");
+        pretty_print("payload", 80);
         println!("{parsed_payload:#?}");
     };
 
