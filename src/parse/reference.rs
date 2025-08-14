@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::File, io::BufReader};
 
 use super::ObjectAttribute;
 
-pub fn parse_reference(file_path: String) -> Result<HashMap<String, ObjectAttribute>> {
+pub fn parse(file_path: String) -> Result<HashMap<String, ObjectAttribute>> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
 

@@ -13,8 +13,21 @@ use super::{
 
 #[derive(Debug, Deserialize)]
 pub struct Payload {
-    object_attribute_ids: Vec<String>,
+    object_attribute_ids: Option<Vec<String>>,
     search_query: SearchQuery,
+}
+
+pub fn parse(
+    input: String,
+    hashmap: &HashMap<String, ObjectAttribute>,
+) -> Result<HashMap<String, Value>> {
+    let is_str = input.starts_with("{");
+
+    if is_str {
+        parse_string(input, hashmap)
+    } else {
+        parse_file(input, hashmap)
+    }
 }
 
 /// Transform picklist oa id to name.
@@ -27,7 +40,7 @@ fn process_picklist_oa_value(oa: &ObjectAttribute, value: Value) -> Value {
                 Some(option) => serde_json::Value::String(option.attributes.name.clone()),
                 None => {
                     println!("Picklist option not found for id: {option_id}");
-                    "not found picklist label".into()
+                    "not_found_picklist_label".into()
                 }
             }
         }
@@ -40,7 +53,7 @@ fn process_picklist_oa_value(oa: &ObjectAttribute, value: Value) -> Value {
                     Some(option) => serde_json::Value::String(option.attributes.name.clone()),
                     None => {
                         println!("Picklist option not found for id: {option_id}");
-                        "not found picklist label".into()
+                        "not_found_picklist_label".into()
                     }
                 }
             })
@@ -141,7 +154,7 @@ fn parse_search_query_conditions(
 
                     (name, value)
                 }
-                None => ("not found".to_string(), condition.value),
+                None => ("not_found".to_string(), condition.value),
             };
 
             let args = match value {
@@ -172,7 +185,7 @@ fn parse_search_query(
     Ok(lisp_expr)
 }
 
-pub fn parse_payload(
+fn parse_file(
     file_path: String,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<HashMap<String, Value>> {
@@ -180,22 +193,40 @@ pub fn parse_payload(
     let reader = BufReader::new(file);
     let payload: Payload = serde_json::from_reader(reader).expect("failed to parse payload file");
 
+    parse_payload(payload, hashmap)
+}
+
+fn parse_string(
+    json_str: String,
+    hashmap: &HashMap<String, ObjectAttribute>,
+) -> Result<HashMap<String, Value>> {
+    let payload: Payload = serde_json::from_str(&json_str).expect("failed to parse payload file");
+
+    parse_payload(payload, hashmap)
+}
+
+fn parse_payload(
+    payload: Payload,
+    hashmap: &HashMap<String, ObjectAttribute>,
+) -> Result<HashMap<String, Value>> {
     let mut map = HashMap::new();
 
-    let search_oa_list = payload
-        .object_attribute_ids
-        .into_iter()
-        .map(|id| {
-            let name = match hashmap.get(&id) {
-                Some(oa) => oa.attributes.name.clone(),
-                None => "not found".to_string(),
-            };
+    let search_oa_list = match payload.object_attribute_ids {
+        Some(ids) => ids
+            .into_iter()
+            .map(|id| {
+                let name = match hashmap.get(&id) {
+                    Some(oa) => oa.attributes.name.clone(),
+                    None => "not_found".to_string(),
+                };
 
-            format!("{name}, {id}")
-        })
-        .collect();
+                format!("{name}, {id}")
+            })
+            .collect::<Vec<String>>(),
+        None => vec![],
+    };
 
-    map.insert("object_attributes".to_string(), search_oa_list);
+    map.insert("object_attributes".to_string(), search_oa_list.into());
 
     let search_query = parse_search_query(payload.search_query, hashmap)?;
 

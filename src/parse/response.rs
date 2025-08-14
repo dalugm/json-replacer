@@ -4,92 +4,29 @@ use std::{collections::HashMap, fs::File, io::BufReader};
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{ObjectAttribute, ObjectEntity};
+use super::{
+    ObjectAttribute, ObjectEntity, convert_entity_uuid_to_value, extract_entity_oa_attributes,
+};
 
 #[derive(Debug, Deserialize)]
 struct Response {
     data: Vec<ObjectEntity>,
 }
 
-fn extract_oa_attributes(entities: Vec<ObjectEntity>) -> Vec<HashMap<String, Value>> {
-    entities
-        .into_iter()
-        .map(|entity| {
-            entity
-                .attributes
-                .into_iter()
-                .filter(|(key, _)| key.starts_with("oa_"))
-                .map(|(key, value)| (key.trim_start_matches("oa_").replace("_", "-"), value))
-                .collect::<HashMap<String, Value>>()
-        })
-        .collect::<Vec<HashMap<String, Value>>>()
-}
-
-fn process_oa_attributes(
-    oa_attributes: Vec<HashMap<String, Value>>,
+pub fn parse(
+    input: String,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<Vec<HashMap<String, Value>>> {
-    oa_attributes
-        .into_iter()
-        .map(|attrs| process_single_attribute(attrs, hashmap))
-        .collect()
-}
+    let is_str = input.starts_with("{");
 
-fn process_single_attribute(
-    mut oa_attribute: HashMap<String, Value>,
-    hashmap: &HashMap<String, ObjectAttribute>,
-) -> Result<HashMap<String, Value>> {
-    let result: HashMap<String, Value> = oa_attribute
-        .drain()
-        .map(|(key, value)| match hashmap.get(&key) {
-            Some(oa) => process_known_attribute(oa, key, value),
-            None => {
-                println!("Unknown object attribute id: {key}");
-                Ok((key, value))
-            }
-        })
-        .collect::<Result<_>>()?;
-
-    Ok(result)
-}
-
-fn process_known_attribute(
-    oa: &ObjectAttribute,
-    key: String,
-    value: Value,
-) -> Result<(String, Value)> {
-    let name = oa.attributes.name.clone();
-
-    if oa.attributes.data_type == "picklist" {
-        match value {
-            Value::Null => {
-                println!(
-                    "Missing picklist value for id: {key}, which oa name is {}",
-                    oa.attributes.name
-                );
-                Ok((name, value))
-            }
-            _ => {
-                let picklist_option = oa.included.iter().find(|option| option.id == value);
-
-                match picklist_option {
-                    Some(option) => Ok((
-                        name,
-                        serde_json::Value::String(option.attributes.name.clone()),
-                    )),
-                    None => {
-                        println!("Picklist option not found for id: {key}");
-                        Ok((name, "not found".into()))
-                    }
-                }
-            }
-        }
+    if is_str {
+        parse_string(input, hashmap)
     } else {
-        Ok((name, value))
+        parse_file(input, hashmap)
     }
 }
 
-pub fn parse_resposne(
+fn parse_file(
     file_path: String,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<Vec<HashMap<String, Value>>> {
@@ -98,10 +35,31 @@ pub fn parse_resposne(
     let response: Response =
         serde_json::from_reader(reader).expect("failed to parse response file");
 
-    let oa_attributes = extract_oa_attributes(response.data);
+    Ok(parse_response(response, hashmap))
+}
 
-    let object_entities: Vec<HashMap<String, Value>> =
-        process_oa_attributes(oa_attributes, hashmap)?;
+fn parse_string(
+    json_str: String,
+    hashmap: &HashMap<String, ObjectAttribute>,
+) -> Result<Vec<HashMap<String, Value>>> {
+    let response: Response =
+        serde_json::from_str(&json_str).expect("failed to parse response file");
 
-    Ok(object_entities)
+    Ok(parse_response(response, hashmap))
+}
+
+fn parse_response(
+    response: Response,
+    hashmap: &HashMap<String, ObjectAttribute>,
+) -> Vec<HashMap<String, Value>> {
+    let entities: Vec<HashMap<String, Value>> = response
+        .data
+        .iter()
+        .map(extract_entity_oa_attributes)
+        .collect();
+
+    entities
+        .iter()
+        .map(|entity| convert_entity_uuid_to_value(entity.clone(), hashmap))
+        .collect()
 }

@@ -3,7 +3,10 @@ mod parse;
 use anyhow::Result;
 use clap::{Args, Parser};
 
-use parse::{payload::parse_payload, reference::parse_reference, response::parse_resposne};
+use parse::{
+    object_entity::parse as parse_entity, payload::parse as parse_payload,
+    reference::parse as parse_reference, response::parse as parse_response,
+};
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -18,52 +21,45 @@ pub struct Cli {
 #[derive(Args, Debug)]
 #[group(required = true, multiple = true)]
 pub struct Inclusive {
-    /// Path to payload file
-    #[arg(short, long, value_name = "PAYLOAD_JSON_FILE")]
+    /// Path to payload file, or payload content
+    #[arg(short, long)]
     pub payload: Option<String>,
 
-    /// Path to response file
-    #[arg(short, long, value_name = "RESPONSE_JSON_FILE")]
+    /// Path to object entity file, or object entity content
+    #[arg(short = 'e', long)]
+    pub object_entity: Option<String>,
+
+    /// Path to response file, or response content
+    #[arg(short, long)]
     pub response: Option<String>,
-}
-
-#[derive(Debug)]
-pub struct Config {
-    /// Path to reference file, should be a oa id hashmap file
-    reference_file_path: String,
-    response_file_path: Option<String>,
-    payload_file_path: Option<String>,
-}
-
-impl Config {
-    pub fn new(args: Cli) -> Self {
-        Config {
-            reference_file_path: args.reference_file,
-            response_file_path: args.inclusive.response,
-            payload_file_path: args.inclusive.payload,
-        }
-    }
 }
 
 fn pretty_print(title: &str, count: usize) {
     println!("\n{:#^width$}\n", format!(" {title} "), width = count);
 }
 
-pub fn run(config: Config) -> Result<()> {
-    let oa_id_hashmap = parse_reference(config.reference_file_path)?;
+pub fn run(cli: Cli) -> Result<()> {
+    let oa_id_hashmap = parse_reference(cli.reference_file)?;
 
-    if let Some(file_path) = config.response_file_path {
-        let object_entities = parse_resposne(file_path, &oa_id_hashmap)?;
+    if let Some(file_path) = cli.inclusive.response {
+        let object_entities = parse_response(file_path, &oa_id_hashmap)?;
 
         pretty_print("response", 80);
         println!("{object_entities:#?}");
     };
 
-    if let Some(file_path) = config.payload_file_path {
+    if let Some(file_path) = cli.inclusive.payload {
         let parsed_payload = parse_payload(file_path, &oa_id_hashmap)?;
 
         pretty_print("payload", 80);
         println!("{parsed_payload:#?}");
+    };
+
+    if let Some(file_path) = cli.inclusive.object_entity {
+        let parsed_entity = parse_entity(file_path, &oa_id_hashmap)?;
+
+        pretty_print("object entity", 80);
+        println!("{parsed_entity:#?}");
     };
 
     Ok(())

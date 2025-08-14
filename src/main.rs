@@ -1,13 +1,12 @@
 use std::process;
 
 use clap::Parser;
-use json_replacer::{Cli, Config, run};
+use json_replacer::{Cli, run};
 
 fn main() {
     let args = Cli::parse();
-    let config = Config::new(args);
 
-    if let Err(e) = run(config) {
+    if let Err(e) = run(args) {
         println!("Application error: {e}");
         process::exit(1);
     }
