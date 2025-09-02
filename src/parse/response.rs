@@ -8,7 +8,7 @@ use super::{
     ObjectAttribute, ObjectEntity, convert_entity_uuid_to_value, extract_entity_oa_attributes,
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct Response {
     data: Vec<ObjectEntity>,
 }

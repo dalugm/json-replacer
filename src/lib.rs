@@ -1,5 +1,3 @@
-mod parse;
-
 use anyhow::Result;
 use clap::{Args, Parser};
 
@@ -8,17 +6,19 @@ use parse::{
     reference::parse as parse_reference, response::parse as parse_response,
 };
 
-#[derive(Debug, Parser)]
+pub mod parse;
+
+#[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
     #[command(flatten)]
     pub inclusive: Inclusive,
 
-    /// Path to reference file, should be an oa id hashmap file
+    /// Path to reference file, should contain object_attributes api response.
     pub reference_file: String,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args)]
 #[group(required = true, multiple = true)]
 pub struct Inclusive {
     /// Path to payload file, or payload content
@@ -41,22 +41,22 @@ fn pretty_print(title: &str, count: usize) {
 pub fn run(cli: Cli) -> Result<()> {
     let oa_id_hashmap = parse_reference(cli.reference_file)?;
 
-    if let Some(file_path) = cli.inclusive.response {
-        let object_entities = parse_response(file_path, &oa_id_hashmap)?;
+    if let Some(response) = cli.inclusive.response {
+        let object_entities = parse_response(response, &oa_id_hashmap)?;
 
         pretty_print("response", 80);
         println!("{object_entities:#?}");
     };
 
-    if let Some(file_path) = cli.inclusive.payload {
-        let parsed_payload = parse_payload(file_path, &oa_id_hashmap)?;
+    if let Some(payload) = cli.inclusive.payload {
+        let parsed_payload = parse_payload(payload, &oa_id_hashmap)?;
 
         pretty_print("payload", 80);
         println!("{parsed_payload:#?}");
     };
 
-    if let Some(file_path) = cli.inclusive.object_entity {
-        let parsed_entity = parse_entity(file_path, &oa_id_hashmap)?;
+    if let Some(object_entity) = cli.inclusive.object_entity {
+        let parsed_entity = parse_entity(object_entity, &oa_id_hashmap)?;
 
         pretty_print("object entity", 80);
         println!("{parsed_entity:#?}");

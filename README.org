@@ -1,6 +1,59 @@
+* Table of Contents                                            :TOC:noexport:
+- [[#json-replacer][Json Replacer]]
+  - [[#usage][Usage]]
+  - [[#build-nightly][Build nightly]]
+  - [[#todo][Todo]]
+
 * Json Replacer
 
 ** Usage
 
-: cargo run -- -h
+: ./json-replacer -h
 
+*** Reference file
+
+First, you need a reference json file, you can get it by copy
+=object_attributes= api's response to a json file, we'll call it
+=oa.json= below.
+
+For example, copy the response content, run the following command in
+console to paste it to =oa.json=.
+
+: pbpaste > oa.json
+
+*** Arguments
+
+There are 3 inclusive functional arguments for this program.
+
+#+begin_verse
+-p, --payload <PAYLOAD>              Path to payload file, or payload content
+-e, --object-entity <OBJECT_ENTITY>  Path to object entity file, or object entity content
+-r, --response <RESPONSE>            Path to response file, or response content
+#+end_verse
+
+e.g
+
+#+begin_example
+./json-replacer oa.json -p payload.json -e entity.json -r response.json
+#+end_example
+
+You need to pass at least one arguments, every argument accepts at
+most one element.
+
+If you don't want to paste contents to file, you can just copy
+content, then run the following command, e.g.:
+
+: ./json-replacer oa.json -p "$(pbpaste)"
+
+** Build nightly
+
+Confirm [[https://www.rust-lang.org/][rust]] in PATH first.
+
+#+begin_src bash-ts
+cargo build -r
+#+end_src
+
+** Todo
+
+- [ ] better lisp expr output
+- [ ] wasm support

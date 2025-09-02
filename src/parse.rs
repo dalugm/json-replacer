@@ -8,54 +8,44 @@ pub mod payload;
 pub mod reference;
 pub mod response;
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct ObjectAttribute {
-    attributes: Attribute,
-    included: Vec<PicklistOption>,
-}
-
-#[derive(Debug, Deserialize)]
-struct PicklistOptionAttribute {
+    data_type: String,
     name: String,
+    picklist_options: Vec<PicklistOption>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct PicklistOption {
     id: String,
-    attributes: PicklistOptionAttribute,
-}
-
-#[derive(Debug, Deserialize)]
-struct Attribute {
     name: String,
-    data_type: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct ObjectEntity {
     attributes: HashMap<String, Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct SearchQuery {
     search_query_groups: Vec<SearchQueryGroup>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct SearchQueryGroup {
     operator: SearchQueryGroupOperator,
     search_query_conditions: Option<Vec<SearchQueryCondition>>,
     children: Option<Vec<SearchQueryGroup>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct SearchQueryCondition {
     operator: SearchQueryConditionOperator,
     object_attribute_id: String,
     value: Option<Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 enum SearchQueryGroupOperator {
     And,
@@ -63,7 +53,7 @@ enum SearchQueryGroupOperator {
     Not,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum SearchQueryConditionOperator {
     Equal,
@@ -106,8 +96,12 @@ fn extract_entity_oa_attributes(entity: &ObjectEntity) -> HashMap<String, Value>
         .clone()
         .into_iter()
         .filter(|(key, _)| key.starts_with("oa_"))
-        .map(|(key, value)| (key.trim_start_matches("oa_").replace("_", "-"), value))
+        .map(|(key, value)| (parse_oa_uuid(&key), value))
         .collect()
+}
+
+fn parse_oa_uuid(key: &str) -> String {
+    key.trim_start_matches("oa_").replace("_", "-")
 }
 
 fn convert_entity_uuid_to_value(
@@ -127,25 +121,22 @@ fn convert_entity_uuid_to_value(
 }
 
 fn process_entity_attribute(oa: &ObjectAttribute, key: String, value: Value) -> (String, Value) {
-    let name = oa.attributes.name.clone();
+    let name = oa.name.clone();
 
-    match oa.attributes.data_type.as_str() {
+    match oa.data_type.as_str() {
         "picklist" => match value {
             Value::Null => {
                 println!(
                     "Missing picklist value for id: {key}, which oa name is {}",
-                    oa.attributes.name
+                    name
                 );
                 (name, value)
             }
             _ => {
-                let picklist_option = oa.included.iter().find(|option| option.id == value);
+                let picklist_option = oa.picklist_options.iter().find(|option| option.id == value);
 
                 match picklist_option {
-                    Some(option) => (
-                        name,
-                        serde_json::Value::String(option.attributes.name.clone()),
-                    ),
+                    Some(option) => (name, serde_json::Value::String(option.name.clone())),
                     None => {
                         println!("Picklist option not found for id: {key}");
                         (name, "not found".into())

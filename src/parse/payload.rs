@@ -4,17 +4,18 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::parse::SearchQueryGroup;
+use crate::parse::{SearchQueryGroup, convert_entity_uuid_to_value, parse_oa_uuid};
 
 use super::{
     ObjectAttribute, SearchQuery, SearchQueryCondition, SearchQueryConditionOperator,
     SearchQueryGroupOperator,
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct Payload {
     object_attribute_ids: Option<Vec<String>>,
-    search_query: SearchQuery,
+    search_query: Option<SearchQuery>,
+    object_entity_attribute_values: Option<HashMap<String, Value>>,
 }
 
 pub fn parse(
@@ -34,10 +35,13 @@ pub fn parse(
 fn process_picklist_oa_value(oa: &ObjectAttribute, value: Value) -> Value {
     match value {
         Value::String(option_id) => {
-            let picklist_option = oa.included.iter().find(|option| option.id == option_id);
+            let picklist_option = oa
+                .picklist_options
+                .iter()
+                .find(|option| option.id == option_id);
 
             match picklist_option {
-                Some(option) => serde_json::Value::String(option.attributes.name.clone()),
+                Some(option) => serde_json::Value::String(option.name.clone()),
                 None => {
                     println!("Picklist option not found for id: {option_id}");
                     "not_found_picklist_label".into()
@@ -47,10 +51,13 @@ fn process_picklist_oa_value(oa: &ObjectAttribute, value: Value) -> Value {
         Value::Array(option_ids) => option_ids
             .iter()
             .map(|option_id| {
-                let picklist_option = oa.included.iter().find(|option| option.id == *option_id);
+                let picklist_option = oa
+                    .picklist_options
+                    .iter()
+                    .find(|option| option.id == *option_id);
 
                 match picklist_option {
-                    Some(option) => serde_json::Value::String(option.attributes.name.clone()),
+                    Some(option) => serde_json::Value::String(option.name.clone()),
                     None => {
                         println!("Picklist option not found for id: {option_id}");
                         "not_found_picklist_label".into()
@@ -145,10 +152,10 @@ fn parse_search_query_conditions(
 
             let (name, value) = match hashmap.get(&condition.object_attribute_id) {
                 Some(oa) => {
-                    let name = oa.attributes.name.clone();
+                    let name = oa.name.clone();
                     let mut value = condition.value;
 
-                    if oa.attributes.data_type == "picklist" {
+                    if oa.data_type == "picklist" {
                         value = value.map(|value| process_picklist_oa_value(oa, value));
                     }
 
@@ -211,29 +218,43 @@ fn parse_payload(
 ) -> Result<HashMap<String, Value>> {
     let mut map = HashMap::new();
 
-    let search_oa_list = match payload.object_attribute_ids {
-        Some(ids) => ids
+    if let Some(ids) = payload.object_attribute_ids {
+        let search_oa_list = ids
             .into_iter()
             .map(|id| {
                 let name = match hashmap.get(&id) {
-                    Some(oa) => oa.attributes.name.clone(),
+                    Some(oa) => oa.name.clone(),
                     None => "not_found".to_string(),
                 };
 
                 format!("{name}, {id}")
             })
-            .collect::<Vec<String>>(),
-        None => vec![],
-    };
+            .collect::<Vec<String>>();
 
-    map.insert("object_attributes".to_string(), search_oa_list.into());
+        map.insert("object_attributes".to_string(), search_oa_list.into());
+    }
 
-    let search_query = parse_search_query(payload.search_query, hashmap)?;
+    if let Some(search_query) = payload.search_query {
+        let search_query = parse_search_query(search_query, hashmap)?;
 
-    map.insert(
-        "search_query".to_string(),
-        serde_json::Value::String(search_query),
-    );
+        map.insert(
+            "search_query".to_string(),
+            serde_json::Value::String(search_query),
+        );
+    }
+
+    if let Some(entity) = payload.object_entity_attribute_values {
+        let entity = entity
+            .into_iter()
+            .map(|(key, value)| (parse_oa_uuid(&key), value))
+            .collect();
+
+        let object_entity = convert_entity_uuid_to_value(entity, hashmap);
+
+        let serde_object = serde_json::to_value(object_entity)?;
+
+        map.insert("object_entity_attribute_values".to_string(), serde_object);
+    }
 
     Ok(map)
 }
