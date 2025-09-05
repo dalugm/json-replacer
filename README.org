@@ -55,5 +55,6 @@ cargo build -r
 
 ** Todo
 
-- [ ] better lisp expr output
+- [X] support parse nested_form
 - [ ] wasm support
+- [ ] better lisp expr output

@@ -4,18 +4,16 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::parse::{SearchQueryGroup, convert_entity_uuid_to_value, parse_oa_uuid};
-
 use super::{
     ObjectAttribute, SearchQuery, SearchQueryCondition, SearchQueryConditionOperator,
-    SearchQueryGroupOperator,
+    SearchQueryGroup, SearchQueryGroupOperator, convert_raw_entity,
 };
 
 #[derive(Deserialize)]
 pub struct Payload {
     object_attribute_ids: Option<Vec<String>>,
     search_query: Option<SearchQuery>,
-    object_entity_attribute_values: Option<HashMap<String, Value>>,
+    pub object_entity_attribute_values: Option<HashMap<String, Value>>,
 }
 
 pub fn parse(
@@ -244,12 +242,7 @@ fn parse_payload(
     }
 
     if let Some(entity) = payload.object_entity_attribute_values {
-        let entity = entity
-            .into_iter()
-            .map(|(key, value)| (parse_oa_uuid(&key), value))
-            .collect();
-
-        let object_entity = convert_entity_uuid_to_value(entity, hashmap);
+        let object_entity = convert_raw_entity(entity, hashmap);
 
         let serde_object = serde_json::to_value(object_entity)?;
 

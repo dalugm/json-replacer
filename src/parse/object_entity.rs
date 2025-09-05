@@ -2,9 +2,7 @@ use anyhow::Result;
 use serde_json::Value;
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-use super::{
-    ObjectAttribute, ObjectEntity, convert_entity_uuid_to_value, extract_entity_oa_attributes,
-};
+use super::{ObjectAttribute, convert_raw_entity};
 
 pub fn parse(
     input: String,
@@ -26,25 +24,23 @@ fn parse_file(
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
 
-    let input: ObjectEntity = serde_json::from_reader(reader)?;
+    let input: HashMap<String, Value> = serde_json::from_reader(reader)?;
 
-    Ok(parse_object_entity(&input, hashmap))
+    Ok(parse_object_entity(input, hashmap))
 }
 
 fn parse_string(
     string: String,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<HashMap<String, Value>> {
-    let input: ObjectEntity = serde_json::from_str(&string)?;
+    let input: HashMap<String, Value> = serde_json::from_str(&string)?;
 
-    Ok(parse_object_entity(&input, hashmap))
+    Ok(parse_object_entity(input, hashmap))
 }
 
 fn parse_object_entity(
-    entity: &ObjectEntity,
+    entity: HashMap<String, Value>,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> HashMap<String, Value> {
-    let entity = extract_entity_oa_attributes(entity);
-
-    convert_entity_uuid_to_value(entity, hashmap)
+    convert_raw_entity(entity, hashmap)
 }

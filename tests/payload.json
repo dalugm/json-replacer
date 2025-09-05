@@ -1,0 +1,28 @@
+{
+  "search_query": {
+    "object_class_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "page": 1,
+    "size": 25,
+    "search_query_groups": [
+      {
+        "id": "0198c5ae-1d2f-772e-bdde-0ebd4a5c2f1d",
+        "operator": "AND",
+        "search_query_conditions": [
+          {
+            "id": "0198c5ae-1d2f-772e-bdde-127132310d8e",
+            "object_attribute_id": "019883f0-c110-7bc5-854e-26a7135a9ec0",
+            "value": "0198c18f-7592-7d0e-aa4f-e45886d24541",
+            "operator": "equal"
+          }
+        ]
+      }
+    ]
+  },
+  "object_entity_attribute_values": {
+    "oa_1": 1,
+    "oa_019883f0_c110_7bc5_854e_26a7135a9ec0": true
+  },
+  "object_attribute_ids": [
+    "019883f0-c110-7bc5-854e-26a7135a9ec0"
+  ]
+}

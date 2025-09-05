@@ -1,0 +1,56 @@
+{
+  "data": [
+    {
+      "type": "ObjectAttribute",
+      "id": "019883f0-c110-7bc5-854e-26a7135a9ec0",
+      "attributes": {
+        "data_type": "picklist",
+        "label": "Type Name",
+        "name": "Type_Name"
+      },
+      "relationships": {
+        "picklist_options": {
+          "data": [
+            {
+              "id": "019883f0-d645-7d15-a8d0-f53e3d1b6a5b",
+              "type": "PicklistOption"
+            },
+            {
+              "id": "019883f0-d645-7d51-ad02-c252ae9ef8c3",
+              "type": "PicklistOption"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "included": {
+    "019883f0-b395-765b-9cf6-0980521634de": {
+      "type": "PicklistOption",
+      "id": "019883f0-b395-765b-9cf6-0980521634de",
+      "attributes": {
+        "disabled": false,
+        "label": "Processed",
+        "name": "Processed"
+      }
+    },
+    "019883f0-d645-7d15-a8d0-f53e3d1b6a5b": {
+      "type": "PicklistOption",
+      "id": "019883f0-d645-7d15-a8d0-f53e3d1b6a5b",
+      "attributes": {
+        "disabled": false,
+        "label": "Assignment",
+        "name": "Assignment"
+      }
+    },
+    "019883f0-d645-7d51-ad02-c252ae9ef8c3": {
+      "type": "PicklistOption",
+      "id": "019883f0-d645-7d51-ad02-c252ae9ef8c3",
+      "attributes": {
+        "disabled": false,
+        "label": "Factoring",
+        "name": "Factoring"
+      }
+    }
+  }
+}

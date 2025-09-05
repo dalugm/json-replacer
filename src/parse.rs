@@ -89,39 +89,17 @@ enum SearchQueryConditionOperator {
     Address,
 }
 
-/// Keep attributes which start with `oa_` only, and change its value to uuid.
-fn extract_entity_oa_attributes(entity: &ObjectEntity) -> HashMap<String, Value> {
-    entity
-        .attributes
-        .clone()
-        .into_iter()
-        .filter(|(key, _)| key.starts_with("oa_"))
-        .map(|(key, value)| (parse_oa_uuid(&key), value))
-        .collect()
-}
-
 fn parse_oa_uuid(key: &str) -> String {
     key.trim_start_matches("oa_").replace("_", "-")
 }
 
-fn convert_entity_uuid_to_value(
-    entity: HashMap<String, Value>,
+fn process_entity_attribute(
+    oa: &ObjectAttribute,
+    key: String,
+    value: Value,
     hashmap: &HashMap<String, ObjectAttribute>,
-) -> HashMap<String, Value> {
-    entity
-        .into_iter()
-        .map(|(key, value)| match hashmap.get(&key) {
-            Some(oa) => process_entity_attribute(oa, key, value),
-            None => {
-                println!("Unknown object attribute id: {key}");
-                (key, value)
-            }
-        })
-        .collect()
-}
-
-fn process_entity_attribute(oa: &ObjectAttribute, key: String, value: Value) -> (String, Value) {
-    let name = oa.name.clone();
+) -> (String, Value) {
+    let name = format!("{} ({})", oa.name, oa.data_type);
 
     match oa.data_type.as_str() {
         "picklist" => match value {
@@ -144,6 +122,43 @@ fn process_entity_attribute(oa: &ObjectAttribute, key: String, value: Value) -> 
                 }
             }
         },
+        "nested_form" => match value {
+            Value::Null => (name, value),
+            _ => {
+                let nested_form_value: HashMap<String, payload::Payload> =
+                    serde_json::from_value(value).expect("failed to parse nested_form");
+
+                let values: Vec<HashMap<String, Value>> = nested_form_value
+                    .into_values()
+                    .map(|value| match value.object_entity_attribute_values {
+                        Some(values) => convert_raw_entity(values, hashmap),
+                        None => HashMap::new(),
+                    })
+                    .collect();
+
+                let json = serde_json::to_value(values).expect("failed to convert values to json");
+
+                (name, json)
+            }
+        },
         _ => (name, value),
     }
+}
+
+fn convert_raw_entity(
+    entity: HashMap<String, Value>,
+    hashmap: &HashMap<String, ObjectAttribute>,
+) -> HashMap<String, Value> {
+    entity
+        .into_iter()
+        .filter(|(key, _)| key.starts_with("oa_"))
+        .map(|(key, value)| (parse_oa_uuid(&key), value))
+        .map(|(key, value)| match hashmap.get(&key) {
+            Some(oa) => process_entity_attribute(oa, key, value, hashmap),
+            None => {
+                println!("Unknown object attribute id: {key}");
+                (key, value)
+            }
+        })
+        .collect()
 }

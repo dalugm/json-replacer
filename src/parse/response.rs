@@ -4,9 +4,7 @@ use std::{collections::HashMap, fs::File, io::BufReader};
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{
-    ObjectAttribute, ObjectEntity, convert_entity_uuid_to_value, extract_entity_oa_attributes,
-};
+use super::{ObjectAttribute, ObjectEntity, convert_raw_entity};
 
 #[derive(Deserialize)]
 struct Response {
@@ -52,14 +50,9 @@ fn parse_response(
     response: Response,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Vec<HashMap<String, Value>> {
-    let entities: Vec<HashMap<String, Value>> = response
+    response
         .data
         .iter()
-        .map(extract_entity_oa_attributes)
-        .collect();
-
-    entities
-        .iter()
-        .map(|entity| convert_entity_uuid_to_value(entity.clone(), hashmap))
+        .map(|entity| convert_raw_entity(entity.attributes.clone(), hashmap))
         .collect()
 }
