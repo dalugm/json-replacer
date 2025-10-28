@@ -1,12 +1,11 @@
-use std::{collections::HashMap, fs::File, io::BufReader};
-
 use anyhow::Result;
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 use super::{
-    ObjectAttribute, SearchQuery, SearchQueryCondition, SearchQueryConditionOperator,
-    SearchQueryGroup, SearchQueryGroupOperator, convert_raw_entity,
+    ObjectAttribute, ObjectAttributeDataType, SearchQuery, SearchQueryCondition,
+    SearchQueryConditionOperator, SearchQueryGroup, SearchQueryGroupOperator, convert_raw_entity,
 };
 
 #[derive(Deserialize)]
@@ -14,19 +13,6 @@ pub struct Payload {
     object_attribute_ids: Option<Vec<String>>,
     search_query: Option<SearchQuery>,
     pub object_entity_attribute_values: Option<HashMap<String, Value>>,
-}
-
-pub fn parse(
-    input: String,
-    hashmap: &HashMap<String, ObjectAttribute>,
-) -> Result<HashMap<String, Value>> {
-    let is_str = input.starts_with("{");
-
-    if is_str {
-        parse_string(input, hashmap)
-    } else {
-        parse_file(input, hashmap)
-    }
 }
 
 /// Transform picklist oa id to name.
@@ -153,7 +139,7 @@ fn parse_search_query_conditions(
                     let name = oa.name.clone();
                     let mut value = condition.value;
 
-                    if oa.data_type == "picklist" {
+                    if oa.data_type == ObjectAttributeDataType::Picklist {
                         value = value.map(|value| process_picklist_oa_value(oa, value));
                     }
 
@@ -190,27 +176,7 @@ fn parse_search_query(
     Ok(lisp_expr)
 }
 
-fn parse_file(
-    file_path: String,
-    hashmap: &HashMap<String, ObjectAttribute>,
-) -> Result<HashMap<String, Value>> {
-    let file = File::open(file_path).expect("failed to open payload");
-    let reader = BufReader::new(file);
-    let payload: Payload = serde_json::from_reader(reader).expect("failed to parse payload file");
-
-    parse_payload(payload, hashmap)
-}
-
-fn parse_string(
-    json_str: String,
-    hashmap: &HashMap<String, ObjectAttribute>,
-) -> Result<HashMap<String, Value>> {
-    let payload: Payload = serde_json::from_str(&json_str).expect("failed to parse payload file");
-
-    parse_payload(payload, hashmap)
-}
-
-fn parse_payload(
+pub fn parse(
     payload: Payload,
     hashmap: &HashMap<String, ObjectAttribute>,
 ) -> Result<HashMap<String, Value>> {

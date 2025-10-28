@@ -1,11 +1,11 @@
 use anyhow::Result;
 use serde::Deserialize;
-use std::{collections::HashMap, fs::File, io::BufReader};
+use std::collections::HashMap;
 
-use super::{ObjectAttribute, PicklistOption};
+use super::{ObjectAttribute, ObjectAttributeDataType, PicklistOption};
 
 #[derive(Deserialize)]
-pub struct ObjectAttributesApiResposne {
+pub struct ObjectAttributesRaw {
     data: Vec<ObjectAttributesData>,
     included: HashMap<String, ObjectAttributesIncluded>,
 }
@@ -20,7 +20,7 @@ struct ObjectAttributesData {
 #[derive(Deserialize)]
 struct ObjectAttributesDataAttributes {
     name: String,
-    data_type: String,
+    data_type: ObjectAttributeDataType,
 }
 
 #[derive(Deserialize)]
@@ -49,15 +49,10 @@ struct RelationshipDataPicklistOption {
     id: String,
 }
 
-pub fn parse(file_path: String) -> Result<HashMap<String, ObjectAttribute>> {
-    let file = File::open(file_path)?;
-    let reader = BufReader::new(file);
+pub fn parse(raw_data: ObjectAttributesRaw) -> Result<HashMap<String, ObjectAttribute>> {
+    let mut map = HashMap::with_capacity(raw_data.data.len());
 
-    let api_response: ObjectAttributesApiResposne = serde_json::from_reader(reader)?;
-
-    let mut map = HashMap::with_capacity(api_response.data.len());
-
-    for oa in &api_response.data {
+    for oa in &raw_data.data {
         let picklist_options = oa
             .relationships
             .picklist_options
@@ -66,7 +61,7 @@ pub fn parse(file_path: String) -> Result<HashMap<String, ObjectAttribute>> {
             .unwrap_or_default()
             .iter()
             .map(|option| {
-                api_response
+                raw_data
                     .included
                     .get(&option.id)
                     .map(|included| PicklistOption {
@@ -82,7 +77,7 @@ pub fn parse(file_path: String) -> Result<HashMap<String, ObjectAttribute>> {
 
         map.entry(oa.id.to_string())
             .or_insert_with(|| ObjectAttribute {
-                data_type: oa.attributes.data_type.clone(),
+                data_type: oa.attributes.data_type,
                 name: oa.attributes.name.clone(),
                 picklist_options,
             });

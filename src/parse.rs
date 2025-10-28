@@ -1,18 +1,72 @@
-use std::collections::HashMap;
-
-use serde::Deserialize;
-use serde_json::Value;
-
 pub mod object_entity;
 pub mod payload;
 pub mod reference;
 pub mod response;
 
+use std::{collections::HashMap, fmt::Display};
+
+use serde::Deserialize;
+use serde_json::Value;
+
 #[derive(Deserialize)]
 pub struct ObjectAttribute {
-    data_type: String,
+    data_type: ObjectAttributeDataType,
     name: String,
     picklist_options: Vec<PicklistOption>,
+}
+
+#[derive(Deserialize, PartialEq, Copy, Clone)]
+#[serde(rename_all = "snake_case")]
+enum ObjectAttributeDataType {
+    Address,
+    Boolean,
+    Currency,
+    Date,
+    Datetime,
+    Email,
+    EncryptedString,
+    File,
+    Float,
+    Id,
+    Integer,
+    NestedForm,
+    Number,
+    Percent,
+    Phone,
+    Picklist,
+    Reference,
+    String,
+    Text,
+    Textarea,
+    Richtextarea,
+}
+
+impl Display for ObjectAttributeDataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ObjectAttributeDataType::Address => write!(f, "address"),
+            ObjectAttributeDataType::Boolean => write!(f, "boolean"),
+            ObjectAttributeDataType::Currency => write!(f, "currency"),
+            ObjectAttributeDataType::Date => write!(f, "date"),
+            ObjectAttributeDataType::Datetime => write!(f, "datetime"),
+            ObjectAttributeDataType::Email => write!(f, "email"),
+            ObjectAttributeDataType::EncryptedString => write!(f, "encrypted_string"),
+            ObjectAttributeDataType::File => write!(f, "file"),
+            ObjectAttributeDataType::Float => write!(f, "float"),
+            ObjectAttributeDataType::Id => write!(f, "id"),
+            ObjectAttributeDataType::Integer => write!(f, "integer"),
+            ObjectAttributeDataType::NestedForm => write!(f, "nested_form"),
+            ObjectAttributeDataType::Number => write!(f, "number"),
+            ObjectAttributeDataType::Percent => write!(f, "percent"),
+            ObjectAttributeDataType::Phone => write!(f, "phone"),
+            ObjectAttributeDataType::Picklist => write!(f, "picklist"),
+            ObjectAttributeDataType::Reference => write!(f, "reference"),
+            ObjectAttributeDataType::String => write!(f, "string"),
+            ObjectAttributeDataType::Text => write!(f, "text"),
+            ObjectAttributeDataType::Textarea => write!(f, "textarea"),
+            ObjectAttributeDataType::Richtextarea => write!(f, "rich_textarea"),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -101,8 +155,8 @@ fn process_entity_attribute(
 ) -> (String, Value) {
     let name = format!("{} ({})", oa.name, oa.data_type);
 
-    match oa.data_type.as_str() {
-        "picklist" => match value {
+    match oa.data_type {
+        ObjectAttributeDataType::Picklist => match value {
             Value::Null => {
                 println!(
                     "Missing picklist value for id: {key}, which oa name is {}",
@@ -122,7 +176,7 @@ fn process_entity_attribute(
                 }
             }
         },
-        "nested_form" => match value {
+        ObjectAttributeDataType::NestedForm => match value {
             Value::Null => (name, value),
             _ => {
                 let nested_form_value: HashMap<String, payload::Payload> =

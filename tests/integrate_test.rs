@@ -1,8 +1,27 @@
-use json_replacer::parse::{
-    object_entity::parse as eparse, payload::parse as pparse, response::parse as rparse,
-};
-
 mod common;
+
+use std::{collections::HashMap, fs, path::Path};
+
+use serde_json::Value;
+
+use json_replacer::{Payload, Response, process_object_entity, process_payload, process_response};
+
+fn get_content(input: String) -> String {
+    let trimmed_input = input.trim();
+
+    // Treat as json str.
+    if trimmed_input.starts_with('{') || trimmed_input.starts_with('[') {
+        return input;
+    }
+
+    let path = Path::new(&input);
+    if path.exists() {
+        // Treat as file.
+        return fs::read_to_string(path).unwrap();
+    }
+
+    input
+}
 
 #[test]
 fn parse_reference() {
@@ -15,8 +34,10 @@ fn parse_reference() {
 fn parse_payload() {
     let reference = common::setup();
 
-    let payload =
-        pparse("tests/payload.json".to_string(), &reference).expect("failed to parse payload");
+    let payload_content = get_content("tests/payload.json".to_string());
+    let payload = serde_json::from_str::<Payload>(&payload_content).unwrap();
+
+    let payload = process_payload(&reference, payload).expect("failed to parse payload");
 
     let object_attributes = payload.get("object_attributes").unwrap();
 
@@ -41,8 +62,10 @@ fn parse_payload() {
 fn parse_response() {
     let reference = common::setup();
 
-    let response =
-        rparse("tests/response.json".to_string(), &reference).expect("failed to parse resposne");
+    let response_content = get_content("tests/response.json".to_string());
+    let response = serde_json::from_str::<Response>(&response_content).unwrap();
+
+    let response = process_response(&reference, response).expect("failed to parse resposne");
 
     assert_eq!(response.len(), 2);
 }
@@ -51,8 +74,12 @@ fn parse_response() {
 fn parse_object_entity() {
     let reference = common::setup();
 
-    let entity = eparse("tests/object_entity.json".to_string(), &reference)
-        .expect("failed to parse object entity");
+    let object_entity_content = get_content("tests/object_entity.json".to_string());
+    let object_entity =
+        serde_json::from_str::<HashMap<String, Value>>(&object_entity_content).unwrap();
+
+    let entity =
+        process_object_entity(&reference, object_entity).expect("failed to parse object entity");
 
     assert_eq!(entity.len(), 3);
 }

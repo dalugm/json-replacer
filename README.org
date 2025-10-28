@@ -45,6 +45,23 @@ content, then run the following command, e.g.:
 
 : ./json-replacer oa.json -p "$(pbpaste)"
 
+** WASM support
+
+To use wasm, import the corresponding pkg.
+
+#+begin_src tsx-ts
+import init, { Processor } from 'json-replacer'
+
+// Initialize first.
+await init()
+
+const processor = new Processor(objectAttributes)
+
+const payload = processor.payload(payloadData)
+const response = processor.response(responseData)
+const objectEntity = processor.entity(objectEntityData)
+#+end_src
+
 ** Build nightly
 
 Confirm [[https://www.rust-lang.org/][rust]] in PATH first.
@@ -56,5 +73,5 @@ cargo build -r
 ** Todo
 
 - [X] support parse nested_form
-- [ ] wasm support
+- [X] wasm support
 - [ ] better lisp expr output
