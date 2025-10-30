@@ -1,6 +1,7 @@
 * Table of Contents                                            :TOC:noexport:
 - [[#json-replacer][Json Replacer]]
   - [[#usage][Usage]]
+  - [[#wasm-support][WASM support]]
   - [[#build-nightly][Build nightly]]
   - [[#todo][Todo]]
 

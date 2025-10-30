@@ -9,6 +9,11 @@ description = "json mapper"
 [lib]
 crate-type = ["rlib", "cdylib"]
 
+[[bin]]
+name = "json-replacer"
+path = "src/main.rs"
+required-features = ["cli"]
+
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"], optional = true }
@@ -20,4 +25,5 @@ wasm-bindgen = "0.2"
 serde-wasm-bindgen = "0.6"
 
 [features]
-cmd = ["dep:clap"]
+default = []
+cli = ["dep:clap"]

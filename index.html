@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WASM Processor</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f7f7f7;
+        color: #333;
+      }
+      main {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+      h1,
+      h2 {
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+      }
+      #status-message {
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: 500;
+        margin-bottom: 15px;
+      }
+      .status-info {
+        background-color: #e6f7ff;
+        border: 1px solid #91d5ff;
+        color: #0056b3;
+      }
+      .status-success {
+        background-color: #f6ffed;
+        border: 1px solid #b7eb8f;
+        color: #389e0d;
+      }
+      .status-error {
+        background-color: #fff1f0;
+        border: 1px solid #ffa39e;
+        color: #d93025;
+      }
+
+      .action-section {
+        margin-bottom: 25px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        padding: 15px;
+      }
+      .action-section label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 100px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      button {
+        background-color: #007aff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      button:hover:not(:disabled) {
+        background-color: #0056b3;
+      }
+      #result-output {
+        background-color: #282c34;
+        color: #9cdcfe;
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: auto;
+        font-family: monospace;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WASM Processor</h1>
+      <div id="status-message" class="status-info">Loading wasm module...</div>
+
+      <section class="action-section">
+        <label for="reference-input">Reference Data</label>
+        <textarea
+          id="reference-input"
+          placeholder="object_attributes api response"
+          rows="5"
+        ></textarea>
+        <button id="init-button">Initialize processor</button>
+      </section>
+
+      <section class="action-section">
+        <label for="payload-input">Payload</label>
+        <textarea id="payload-input" rows="3">{}</textarea>
+        <button id="payload-button" disabled>Parse payload</button>
+      </section>
+
+      <section class="action-section">
+        <label for="response-input">Response</label>
+        <textarea id="response-input" rows="3">{}</textarea>
+        <button id="response-button" disabled>Parse response</button>
+      </section>
+
+      <section class="action-section">
+        <label for="entity-input">Object entity attributes</label>
+        <textarea id="entity-input" rows="3">{}</textarea>
+        <button id="entity-button" disabled>
+          Parse object entity attributes
+        </button>
+      </section>
+
+      <h2>Result</h2>
+      <pre id="result-output"></pre>
+    </main>
+
+    <script type="module">
+      import init, { Processor } from "./pkg/json_replacer.js";
+
+      let processorInstance = null;
+
+      const statusEl = document.getElementById("status-message");
+      const resultEl = document.getElementById("result-output");
+
+      const refInput = document.getElementById("reference-input");
+      const initBtn = document.getElementById("init-button");
+
+      const payloadInput = document.getElementById("payload-input");
+      const payloadBtn = document.getElementById("payload-button");
+
+      const responseInput = document.getElementById("response-input");
+      const responseBtn = document.getElementById("response-button");
+
+      const entityInput = document.getElementById("entity-input");
+      const entityBtn = document.getElementById("entity-button");
+
+      function setStatus(message, type = "info") {
+        statusEl.textContent = message;
+        statusEl.className = `status-${type}`;
+      }
+
+      function format(key, value) {
+        if (value instanceof Map) {
+          return Object.fromEntries(value);
+        } else {
+          return value;
+        }
+      }
+
+      async function main() {
+        try {
+          await init();
+          setStatus(
+            "WASM module loaded, initialize Processor first",
+            "success",
+          );
+        } catch (e) {
+          setStatus(`Failed to load wasm module: ${e.message}`, "error");
+          return;
+        }
+
+        initBtn.onclick = () => {
+          try {
+            const refData = JSON.parse(refInput.value);
+
+            processorInstance = new Processor(refData);
+
+            setStatus("Processor initialize successfully", "success");
+            resultEl.textContent = "Processor ready.";
+            payloadBtn.disabled = false;
+            responseBtn.disabled = false;
+            entityBtn.disabled = false;
+          } catch (e) {
+            setStatus(`Failed to initialize: ${e.message}`, "error");
+            processorInstance = null;
+            payloadBtn.disabled = true;
+            responseBtn.disabled = true;
+            entityBtn.disabled = true;
+          }
+        };
+
+        payloadBtn.onclick = () => {
+          handleProcess("payload", payloadInput);
+        };
+        responseBtn.onclick = () => {
+          handleProcess("response", responseInput);
+        };
+        entityBtn.onclick = () => {
+          handleProcess("entity", entityInput);
+        };
+      }
+
+      function handleProcess(methodName, inputElement) {
+        if (!processorInstance) {
+          setStatus("Processor is not initialized yet", "error");
+          return;
+        }
+        try {
+          const inputData = JSON.parse(inputElement.value);
+
+          const result = processorInstance[methodName](inputData);
+
+          console.log(result);
+
+          resultEl.textContent = JSON.stringify(result, format, 2);
+          setStatus(`Executed '${methodName}'`, "success");
+        } catch (e) {
+          setStatus(`Failed to execute '${methodName}': ${e.message}`, "error");
+          resultEl.textContent = e.message;
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>
